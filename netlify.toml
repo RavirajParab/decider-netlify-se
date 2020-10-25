@@ -2,3 +2,8 @@
   command = "npm run build"
   publish = "dist/client"
   functions = "dist/server"
+
+[[headers]]
+for = "/*"
+[headers.values]
+Access-Control-Allow-Origin = "*"
