@@ -22,10 +22,10 @@ const calculateRSI=(i,lq)=>{
 }
 
 const getChange=(i,lq)=>{
-  const currPrice = lq.price;
-  const yestPrice = i.historical[i.historical.length-1].lp;
+  const currPrice = i.price;
+  const yestPrice = lq.c//i.historical[i.historical.length-1].lp;
   const change = currPrice/yestPrice;
-  return fixToDecimal(change);
+  return change;
 }
 
 const getAVD = async () => {
@@ -285,7 +285,7 @@ const getNiftyETFData =async ()=>{
                 price: lq.price,//i.historical[i.historical.length-1].lp,
                 vol: lq.vol,//i.historical[i.historical.length-1].v
                 rsi: calculateRSI(i,lq),
-                change: getChange(i,lq)
+                change: fixToDecimal(lq.change*100/lq.c)
             }  
         });
     return ETFData;
