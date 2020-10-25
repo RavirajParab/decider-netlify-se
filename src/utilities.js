@@ -236,7 +236,7 @@ const getRSIForAllTopCompanies = async () => {
 };
 
 const getQuote = async (req) => {
-  const url = `https://quotes-api.tickertape.in/quotes?sids=${req.query.sid}`;
+  const url = `https://quotes-api.tickertape.in/quotes?sids=${req.queryStringParameters.sid}`;
   const resprom = await fetch(url);
   const res = await resprom.json();
   return res.data;
