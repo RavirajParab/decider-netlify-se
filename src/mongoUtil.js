@@ -22,6 +22,18 @@ const GetShortPositions = async () => {
     .toArray();
   return openPositions;
 };
+//gets the delivery positions
+const GetDeliveryPositions = async () => {
+  const client = await Connect();
+  const openPositions = await client
+    .db("DBDecider")
+    .collection("Delivery")
+    .find({
+      Position: "open",
+    })
+    .toArray();
+  return openPositions;
+};
 
 const CoverShortPosition = async (coverShort) => {
   const client = await Connect();
@@ -67,7 +79,51 @@ const CoverShortPosition = async (coverShort) => {
     );
 };
 
-const DeleteClosedPositions=async ()=>{
+const CoverDeliveryPosition = async (coverDelivery) => {
+  const client = await Connect();
+  /*
+    const coverShort ={
+        Symbol :'INFY',
+        SellPrice: 980
+    }
+    */
+  const deliveryOfSymbol = await client
+    .db("DBDecider")
+    .collection("Delivery")
+    .find({
+      Position: "open",
+      Symbol: coverDelivery.Symbol,
+    })
+    .toArray();
+  let pl = 0;
+  let principal = 0;
+  //calculate profit or loss
+  deliveryOfSymbol.forEach((i) => {
+    pl += i.Qty * (coverDelivery.SellPrice-i.Buy);
+    principal += i.Qty * i.Buy;
+  });
+  if (pl > 0) {
+    pl = 0.9 * pl;
+  }
+  const finalAmount = principal + pl;
+  //add the Pl to the balance
+  await client
+    .db("DBDecider")
+    .collection("Balance")
+    .findOneAndUpdate({ ID: 1 }, { $inc: { Balance: finalAmount } });
+
+  //finally close the positions
+  await client
+    .db("DBDecider")
+    .collection("Delivery")
+    .findOneAndUpdate(
+      { Symbol: coverDelivery.Symbol,
+        Position:'open' },
+      { $set: { Position: "close" } }
+    );
+};
+
+const DeleteClosedShortPositions=async ()=>{
     const client = await Connect();
     await client
     .db("DBDecider")
@@ -75,6 +131,17 @@ const DeleteClosedPositions=async ()=>{
     .deleteMany({
         Position :'close'
     })
+}
+//delete the delivery positions
+
+const DeleteClosedDeliveryPositions=async ()=>{
+  const client = await Connect();
+  await client
+  .db("DBDecider")
+  .collection("Delivery")
+  .deleteMany({
+      Position :'close'
+  })
 }
 
 const GetBalance = async () => {
@@ -119,7 +186,42 @@ const AddShortPosition = async (shortPosition) => {
   //return InsertedShort;
 };
 
-const AllShorting = async (req) => {
+
+const AddDeliveryPosition = async (deliveryPosition) => {
+  const client = await Connect();
+  //short Position
+  /*
+  const shortPosition = {
+    Type: "short",
+    Symbol: "INFY",
+    Buy: 987.5,
+    Qty: 1,
+    Position:'open'
+  };
+  */
+  //add the position
+
+  const InsertedDelivery = await client
+    .db("DBDecider")
+    .collection("Delivery")
+    .insertOne(deliveryPosition);
+
+  const balanceToBeDeducted = deliveryPosition.Buy * deliveryPosition.Qty;
+
+  //add balance
+
+  await client
+    .db("DBDecider")
+    .collection("Balance")
+    .findOneAndUpdate({ ID: 1 }, { $inc: { Balance: -balanceToBeDeducted } });
+
+  //finally close the client
+  client.close();
+  //return InsertedShort;
+};
+
+
+const AllTrading = async (req) => {
   const methodName = req.queryStringParameters.method;
   const data = req.queryStringParameters.data;
   
@@ -138,14 +240,26 @@ const AllShorting = async (req) => {
   } else if (methodName === "GetShortPositions") {
     const result = await GetShortPositions();
     return result;
+  }else if (methodName === "GetDeliveryPositions") {
+    const result = await GetDeliveryPositions();
+    return result;
   } else if (methodName === "AddShortPosition") {
     const result = await AddShortPosition(parsedData);
+    return result;
+  }else if (methodName === "AddDeliveryPosition") {
+    const result = await AddDeliveryPosition(parsedData);
     return result;
   } else if (methodName === "CoverShortPosition") {
     const result = await CoverShortPosition(parsedData);
     return result;
-  }else if (methodName === "DeleteClosedPositions") {
-    const result = await DeleteClosedPositions();
+  }else if (methodName === "CoverDeliveryPosition") {
+    const result = await CoverDeliveryPosition(parsedData);
+    return result;
+  }else if (methodName === "DeleteClosedShortPositions") {
+    const result = await DeleteClosedShortPositions();
+    return result;
+  }else if (methodName === "DeleteClosedDeliveryPositions") {
+    const result = await DeleteClosedDeliveryPositions();
     return result;
   }
 };
@@ -169,5 +283,5 @@ AllShorting('GetShortPositions').then(d=>{
 */
 
 module.exports = {
-  AllShorting,
+  AllTrading,
 };

@@ -1,6 +1,6 @@
-const {AllShorting} = require("../mongoUtil");
+const {AllTrading} = require("../mongoUtil");
 exports.handler = async (event, context) => {
-    const companies = await AllShorting(event);
+    const companies = await AllTrading(event);
     const headers = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type',
