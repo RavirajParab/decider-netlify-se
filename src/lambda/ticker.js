@@ -1,6 +1,6 @@
-const {SetupTicker} = require("../tickerutil");
+const {getAllQuotes} = require("../tickerutil");
 exports.handler = async (event, context) => {
-    const quotes = await SetupTicker();
+    const quotes = await getAllQuotes();
     const headers = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type',

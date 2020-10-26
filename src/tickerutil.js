@@ -145,6 +145,7 @@ const reProcessMongoTickerData =async ()=>{
 const SetupTicker =async ()=>{
     try{
         const quotes = await getAllQuotes();
+        /*
         console.log('Ticker quotes obtained. Now updating MongoDB....');
         const tickerData =await UpdateTicker(quotes);
         console.log('Now, processing the MongoTicker data');
@@ -153,6 +154,8 @@ const SetupTicker =async ()=>{
         console.log('updating MongoDB with processed data');
         await UpdateTicker(reProcessedData);
         return {'Message':'MongoDB Updated successfully with ticker data'};
+        */
+       return quotes;
     }
     catch(err){
         console.log(err);
@@ -160,5 +163,6 @@ const SetupTicker =async ()=>{
 }
 
 module.exports={
-    SetupTicker
+    getAllQuotes,
+    UpdateTicker
 }
