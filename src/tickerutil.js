@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 const { MongoClient } = require("mongodb");
 const { RSI } = require("technicalindicators");
 const { MACD } = require("technicalindicators");
