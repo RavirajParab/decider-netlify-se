@@ -1,4 +1,4 @@
-const {getAllQuotes} = require("../tickerutil");
+const {getAllQuotes} = require("../utilities");
 exports.handler = async (event, context) => {
     const quotes = await getAllQuotes();
     const headers = {
