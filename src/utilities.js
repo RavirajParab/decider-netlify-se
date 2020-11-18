@@ -1,4 +1,5 @@
 import fetch from "node-fetch";
+import lodash from "lodash";
 const { RSI } = require("technicalindicators");
 const fixToDecimal=(data)=>{
   if(data){
@@ -323,6 +324,47 @@ const getAllQuotes =async()=>{
   return resolvedData;
 }
 
+const getShortCandidates = async ()=>{
+  try{
+    const indexProm= await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse');
+    const Data = await indexProm.json();
+    const indexData=Data.searchresult.map(i=> {
+       return{ 
+       "IndexID":i.indexId,
+       "IndexName":i.indexName,
+       "IndexChange":i.perChange,
+       "IndexAdvChange":i.advancesPerChange}
+    }).sort((a,b)=>a.IndexChange-b.IndexChange);
+    
+    //get the bad performing indices
+    const illPerformingIndices = indexData.filter(i=>i.IndexChange<0);
+    //get the companies of ill performing indices
+
+    const illCompaniesPromise=illPerformingIndices.map(i=>fetch(`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.IndexID}`));
+    const illCompaniesPromRes = await Promise.all(illCompaniesPromise);
+    const illCompaniesDataProm= illCompaniesPromRes.map(i=>i.json());    
+    const illCompaniesFinalData = await Promise.all(illCompaniesDataProm);
+    const companies=[];
+    const illCompanies= illCompaniesFinalData.forEach(i=>{
+        const cosFiltered= i.searchresult[0].companies.filter(i=>i.percentChange<0);
+        companies.push(...cosFiltered);
+    });
+
+    const finalData= companies.map(i=>{
+        return {
+            "CompanyID":i.companyId,
+            "Symbol":i.symbol,
+            "Change":i.percentChange
+        }
+    }).sort((m,n)=>(m.Change-n.Change));
+   const ShortfulCompanies = lodash.uniqBy(finalData,'Symbol');
+   return ShortfulCompanies;
+}
+catch(err){
+    throw err;
+}
+}
+
 module.exports = {
   getAVD,
   getMMI,
@@ -330,5 +372,6 @@ module.exports = {
   getRSIForAllTopCompanies,
   getNiftyHundredETData,
   getNiftyETFData,
-  getAllQuotes
+  getAllQuotes,
+  getShortCandidates
 };
