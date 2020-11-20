@@ -324,7 +324,7 @@ const getAllQuotes =async()=>{
   return resolvedData;
 }
 
-const getShortCandidates = async ()=>{
+const getShortCandidates = async (sell=true)=>{
   try{
     const indexProm= await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse');
     const Data = await indexProm.json();
@@ -337,7 +337,13 @@ const getShortCandidates = async ()=>{
     }).sort((a,b)=>a.IndexChange-b.IndexChange);
     
     //get the bad performing indices
-    const illPerformingIndices = indexData.filter(i=>i.IndexChange<0);
+    const illPerformingIndices = indexData.filter(i=>{
+      if(sell){
+        return i.IndexChange<0;
+      }else{
+        return i.IndexChange>0;
+      }
+    });
     //get the companies of ill performing indices
 
     const illCompaniesPromise=illPerformingIndices.map(i=>fetch(`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.IndexID}`));
@@ -346,7 +352,13 @@ const getShortCandidates = async ()=>{
     const illCompaniesFinalData = await Promise.all(illCompaniesDataProm);
     const companies=[];
     const illCompanies= illCompaniesFinalData.forEach(i=>{
-        const cosFiltered= i.searchresult[0].companies.filter(i=>i.percentChange<0);
+        const cosFiltered= i.searchresult[0].companies.filter(i=>{
+          if(sell){
+            return i.percentChange<0;
+          }else{
+            return i.percentChange>0;
+          }
+        });
         companies.push(...cosFiltered);
     });
 
@@ -356,7 +368,13 @@ const getShortCandidates = async ()=>{
             "Symbol":i.symbol,
             "Change":i.percentChange
         }
-    }).sort((m,n)=>(m.Change-n.Change));
+    }).sort((m,n)=>{
+      if(sell){
+       return m.Change-n.Change;
+      }else{
+        return n.Change-m.Change;
+      }
+    });
    const ShortfulCompanies = lodash.uniqBy(finalData,'Symbol');
    return ShortfulCompanies;
 }

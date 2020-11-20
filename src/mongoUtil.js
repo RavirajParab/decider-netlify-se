@@ -141,7 +141,15 @@ const DeleteClosedDeliveryPositions=async ()=>{
   .collection("Delivery")
   .deleteMany({
       Position :'close'
-  })
+  });
+}
+
+const ResetBalance= async ()=>{
+  const client = await Connect();
+  await client
+    .db("DBDecider")
+    .collection("Balance")
+    .findOneAndUpdate({ ID: 1 }, { $set: { Balance: 700000 } });
 }
 
 const GetBalance = async () => {
@@ -260,6 +268,9 @@ const AllTrading = async (req) => {
     return result;
   }else if (methodName === "DeleteClosedDeliveryPositions") {
     const result = await DeleteClosedDeliveryPositions();
+    return result;
+  }else if (methodName === "ResetBalance") {
+    const result = await ResetBalance();
     return result;
   }
 };
