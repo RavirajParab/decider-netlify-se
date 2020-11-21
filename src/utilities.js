@@ -334,7 +334,7 @@ const getIndexData =async ()=>{
      "IndexChange":i.perChange,
      "Bullishness":Number(i.advancesPerChange.toFixed(2)),
      "Rise":Number(((i.currentIndexValue-i.fiftyTwoWeekLowIndexValue)*100/i.fiftyTwoWeekLowIndexValue).toFixed(2)),
-     "StocksUrl":`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.indexId}`
+     "StocksUrl":`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.indexId}&pagesize=100`
   }
   }).sort((a,b)=>a.Rise-b.Rise);
   
@@ -379,7 +379,7 @@ const getShortCandidates = async (sell=true)=>{
     });
     //get the companies of ill performing indices
 
-    const illCompaniesPromise=illPerformingIndices.map(i=>fetch(`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.IndexID}`));
+    const illCompaniesPromise=illPerformingIndices.map(i=>fetch(`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.IndexID}&pagesize=1000`));
     const illCompaniesPromRes = await Promise.all(illCompaniesPromise);
     const illCompaniesDataProm= illCompaniesPromRes.map(i=>i.json());    
     const illCompaniesFinalData = await Promise.all(illCompaniesDataProm);
