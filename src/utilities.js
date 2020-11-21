@@ -324,6 +324,39 @@ const getAllQuotes =async()=>{
   return resolvedData;
 }
 
+const getIndexData =async ()=>{
+  const indexProm= await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse');
+  const Data = await indexProm.json();
+  const indexData=Data.searchresult.map(i=> {
+     return{ 
+     "IndexID":i.indexId,
+     "IndexName":i.indexName,
+     "IndexChange":i.perChange,
+     "Bullishness":Number(i.advancesPerChange.toFixed(2)),
+     "Rise":Number(((i.currentIndexValue-i.fiftyTwoWeekLowIndexValue)*100/i.fiftyTwoWeekLowIndexValue).toFixed(2)),
+     "StocksUrl":`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.indexId}`
+  }
+  }).sort((a,b)=>a.Rise-b.Rise);
+  
+  const fullIndexDataProm =indexData.map(async i=>{
+      const indexCosProm = await fetch(i.StocksUrl);
+      const indexCosDataRaw = await indexCosProm.json();
+      const indexCosData = indexCosDataRaw.searchresult;
+      const data ={
+          "IndexData":{...i},
+          "Companies":indexCosData[0].companies.map(n=>{
+              return {
+                  "Symbol":n.symbol,
+                  "Rise":Number(((n.current-n.fiftyTwoWeekLowPrice)*100/n.fiftyTwoWeekLowPrice).toFixed(2))
+              }
+          }).sort((a,b)=>(a.Rise-b.Rise))
+      }
+      return data;
+  });
+  const fullIndexData = await Promise.all(fullIndexDataProm);
+  return fullIndexData;
+}
+
 const getShortCandidates = async (sell=true)=>{
   try{
     const indexProm= await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse');
@@ -391,5 +424,6 @@ module.exports = {
   getNiftyHundredETData,
   getNiftyETFData,
   getAllQuotes,
-  getShortCandidates
+  getShortCandidates,
+  getIndexData
 };
