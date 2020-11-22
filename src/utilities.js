@@ -416,6 +416,29 @@ catch(err){
 }
 }
 
+const getGlobalIndexData=async ()=>{
+  try{
+    const indexProm= await fetch('https://ewmw.edelweiss.in/api/Market/MarketsModule/MarketsIndices');
+    const data = await indexProm.json();
+    const gData = (JSON.parse(data)).JsonData;
+    const globalIndicesData =gData.GI
+    const USAIndex = globalIndicesData.America.filter(i=>i.Coun==="United States");
+    const EUIndex = globalIndicesData.Europe.filter(i=>((i.Coun==="United Kingdom")||(i.Coun==="France")||(i.Coun==="Germany")));
+    const AsiaIndex = globalIndicesData.Asia.filter(i=>((i.Coun==="Japan")||(i.Coun==="Hong Kong")||(i.Coun==="Singapore")));
+    const AllGlobalFiltered =[...USAIndex,...EUIndex,...AsiaIndex].map(i=>{
+        return {
+            "Index":i.IName,
+            "Change":i.PChng,
+            "Region":i.Reg
+        }
+    }).reverse();
+    return AllGlobalFiltered;
+}
+catch(err){
+    throw err;
+}
+}
+
 module.exports = {
   getAVD,
   getMMI,
@@ -425,5 +448,6 @@ module.exports = {
   getNiftyETFData,
   getAllQuotes,
   getShortCandidates,
-  getIndexData
+  getIndexData,
+  getGlobalIndexData
 };
