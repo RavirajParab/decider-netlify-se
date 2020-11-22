@@ -288,6 +288,7 @@ const getNiftyETFData =async ()=>{
                 yrt: fixToDecimal(i.ratios.returns['1y']),
                 mrt: fixToDecimal(i.ratios.returns['1m']),
                 price: lq.price,//i.historical[i.historical.length-1].lp,
+                rise : fixToDecimal((lq.price-i.ratios['52wLow'])*100/i.ratios['52wLow']),
                 vol: lq.vol,//i.historical[i.historical.length-1].v
                 rsi: RSIData,//calculateRSI(i, lq),
                 change: fixToDecimal(lq.change * 100 / lq.c)
