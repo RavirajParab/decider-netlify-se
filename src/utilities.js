@@ -258,23 +258,27 @@ const getNiftyETFData =async ()=>{
   const result = JSON.parse(modifiedText);
   return result.searchresult;
   */
- const ETFS=['N100','GBES','NBES','SBIF','NIPD','JBES','ICIV','NTFM'];
-        const ETFSPromArr = ETFS.map(i=>{
+ const ETFS = ['N100', 'GBES', 'NBES', 'SBIF', 'NIPD', 'JBES', 'ICIV', 'NTFM'];
+        const ETFSPromArr = ETFS.map(i => {
             return fetch(`https://api.tickertape.in/stockwidget/internal/${i}`);
         });
 
-        const quotes=await fetch(`https://quotes-api.tickertape.in/quotes?sids=${ETFS.join(',')}`)
+        const quotes = await fetch(`https://quotes-api.tickertape.in/quotes?sids=${ETFS.join(',')}`)
         const quotesData = await quotes.json();
-        const liveETFQuotes=quotesData.data;
+        const liveETFQuotes = quotesData.data;
 
-        const ETFSResolved= await Promise.all(ETFSPromArr);
-        const ETFResolvedData = await Promise.all(ETFSResolved.map(i=>i.json()));
-        const ETFSFullData=ETFResolvedData.map(i=>i.data);
-        const ETFData=ETFSFullData.map((i,index)=>{
-            const lq=liveETFQuotes[index];
+        const ETFSResolved = await Promise.all(ETFSPromArr);
+        const ETFResolvedData = await Promise.all(ETFSResolved.map(i => i.json()));
+        const ETFSFullData = ETFResolvedData.map(i => i.data);
+        const ETFData = ETFSFullData.map(async (i, index) => {
+            const lq = liveETFQuotes[index];
+            const indexProm = await fetch(`http://clearnifty.com/chart/${i.info.ticker}/rsi/?xhr`);
+            const data = await indexProm.json();
+            const RSIData= data.text_analysis;
+
             return {
-                name :i.info.name,
-                oname :ETFS[index],
+                name: i.info.name,
+                oname: ETFS[index],
                 ticker: i.info.ticker,
                 yhi: i.ratios['52wHigh'],
                 ylo: i.ratios['52wLow'],
@@ -285,11 +289,12 @@ const getNiftyETFData =async ()=>{
                 mrt: fixToDecimal(i.ratios.returns['1m']),
                 price: lq.price,//i.historical[i.historical.length-1].lp,
                 vol: lq.vol,//i.historical[i.historical.length-1].v
-                rsi: calculateRSI(i,lq),
-                change: fixToDecimal(lq.change*100/lq.c)
-            }  
+                rsi: RSIData,//calculateRSI(i, lq),
+                change: fixToDecimal(lq.change * 100 / lq.c)
+            }
         });
-    return ETFData;
+        const resolvedETFData = await Promise.all(ETFData);
+        return resolvedETFData;
 }
 const getInternalData =async (sec)=>{
   try{
