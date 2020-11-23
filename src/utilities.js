@@ -333,6 +333,7 @@ const getAllQuotes =async()=>{
 const getIndexData =async ()=>{
   const indexProm= await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse&pagesize=1000');
   const Data = await indexProm.json();
+  const InSignificantIndexIDs=[14116,13029,14214,13654,13534,15011,13931,14967,13653,13021,13019,15501,14306,2346,14353,14303,2510,13602,2369,2371,2495,2907,13532];
   const indexData=Data.searchresult.map(i=> {
      return{ 
      "IndexID":i.indexId,
@@ -342,7 +343,9 @@ const getIndexData =async ()=>{
      "Rise":Number(((i.currentIndexValue-i.fiftyTwoWeekLowIndexValue)*100/i.fiftyTwoWeekLowIndexValue).toFixed(2)),
      "StocksUrl":`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.indexId}&pagesize=100`
   }
-  }).sort((a,b)=>a.IndexChange-b.IndexChange);
+  })
+  .filter(i=>!InSignificantIndexIDs.includes(Number(i.IndexID)))
+  .sort((a,b)=>a.IndexChange-b.IndexChange);
   
   const fullIndexDataProm =indexData.map(async i=>{
       const indexCosProm = await fetch(i.StocksUrl);
