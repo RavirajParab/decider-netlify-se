@@ -331,7 +331,7 @@ const getAllQuotes =async()=>{
 }
 
 const getIndexData =async ()=>{
-  const indexProm= await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse');
+  const indexProm= await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse&pagesize=1000');
   const Data = await indexProm.json();
   const indexData=Data.searchresult.map(i=> {
      return{ 
@@ -342,7 +342,7 @@ const getIndexData =async ()=>{
      "Rise":Number(((i.currentIndexValue-i.fiftyTwoWeekLowIndexValue)*100/i.fiftyTwoWeekLowIndexValue).toFixed(2)),
      "StocksUrl":`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.indexId}&pagesize=100`
   }
-  }).sort((a,b)=>a.Rise-b.Rise);
+  }).sort((a,b)=>a.IndexChange-b.IndexChange);
   
   const fullIndexDataProm =indexData.map(async i=>{
       const indexCosProm = await fetch(i.StocksUrl);
@@ -382,7 +382,7 @@ const getShortCandidates = async (sell=true)=>{
       }else{
         return i.IndexChange>0;
       }
-    });
+    }).slice(0,4)
     //get the companies of ill performing indices
 
     const illCompaniesPromise=illPerformingIndices.map(i=>fetch(`https://etmarketsapis.indiatimes.com/ET_Stats/getIndexByIds?indexid=${i.IndexID}&pagesize=1000`));
