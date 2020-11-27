@@ -240,7 +240,24 @@ const getQuote = async (req) => {
   const url = `https://quotes-api.tickertape.in/quotes?sids=${req.queryStringParameters.sid}`;
   const resprom = await fetch(url);
   const res = await resprom.json();
-  return res.data;
+  
+  const cosSIDs =req.queryStringParameters.sid.split(',');
+  const DRSIProm=cosSIDs.map(n=>{
+    let myReq ={
+      queryStringParameters:{
+        sid:n
+      }
+    };
+    return getLiveRSIDaywise(myReq);
+  });
+  const DRISData = await Promise.all(DRSIProm);
+  const finalData = res.data.map((v,i)=>{
+    return {
+      ...v,
+      drsi :DRISData[i].RSI
+    }
+  });
+  return finalData;
 };
 
 const getLiveRSIDaywise =async (req)=>{
@@ -259,7 +276,8 @@ const getLiveRSIDaywise =async (req)=>{
     const data = {
       RSI: i,
       Price: finalData[index + timePeriodRSI].lp,
-      TS:(new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString()
+      TS:(new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
+      SID: req.queryStringParameters.sid
     }
     return data;
   });
