@@ -236,6 +236,29 @@ const getRSIForAllTopCompanies = async () => {
   return rsiData;
 };
 
+const getForecastForSID =async (sid)=>{
+  const foreCastUrl =`https://api.tickertape.in/stocks/commentaries/${sid}?keys[]=forecasts`;
+  const forcastProm = await fetch(foreCastUrl);
+  const forecast = await forcastProm.json();
+  const cleanForecast ={
+    sid : sid,
+    eps : forecast.data.forecasts.eps,
+    price: forecast.data.forecasts.price,
+    revenue :forecast.data.forecasts.revenue
+  }
+ return cleanForecast;
+}
+
+const getForecasts =async ()=>{
+  const nifty200url =`https://api.tickertape.in/indices/info/.NIFTY200`;
+  const nifty200prom = await fetch(nifty200url);
+  const nifty200Data = await nifty200prom.json();
+  const top200sids= nifty200Data.data.constituents;
+  const top200forcastProm = top200sids.map(i=>getForecastForSID(i));
+  const top200forcastRes = await Promise.all(top200forcastProm);
+  return top200forcastRes;
+}
+
 const getTop200DRSI = async ()=>{
   const nifty200url =`https://api.tickertape.in/indices/info/.NIFTY200`;
   const nifty200prom = await fetch(nifty200url);
@@ -517,5 +540,6 @@ module.exports = {
   getIndexData,
   getGlobalIndexData,
   getLiveRSIDaywise,
-  getTop200DRSI
+  getTop200DRSI,
+  getForecasts
 };
