@@ -242,9 +242,9 @@ const getForecastForSID =async (sid)=>{
   const forecast = await forcastProm.json();
   const cleanForecast ={
     sid : sid,
-    eps : forecast.data.forecasts.eps,
-    price: forecast.data.forecasts.price,
-    revenue :forecast.data.forecasts.revenue
+    eps : forecast.data.forecasts.eps[0],
+    price: forecast.data.forecasts.price[0],
+    revenue :forecast.data.forecasts.revenue[0]
   }
  return cleanForecast;
 }
