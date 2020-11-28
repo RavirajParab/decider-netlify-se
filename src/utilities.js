@@ -236,6 +236,22 @@ const getRSIForAllTopCompanies = async () => {
   return rsiData;
 };
 
+const getTop200DRSI = async ()=>{
+  const nifty200url =`https://api.tickertape.in/indices/info/.NIFTY200`;
+  const nifty200prom = await fetch(nifty200url);
+  const nifty200Data = await nifty200prom.json();
+  const top200sids= nifty200Data.data.constituents;
+  const top200drsiProm = top200sids.map(i=>{
+    let myReq ={
+      queryStringParameters:{
+        sid:i
+      }
+    };
+    return getLiveRSIDaywise(myReq);
+  });
+  const top200drsiRes = await Promise.all(top200drsiProm);
+  return top200drsiRes;
+}
 const getQuote = async (req) => {
   const url = `https://quotes-api.tickertape.in/quotes?sids=${req.queryStringParameters.sid}`;
   const resprom = await fetch(url);
@@ -500,5 +516,6 @@ module.exports = {
   getShortCandidates,
   getIndexData,
   getGlobalIndexData,
-  getLiveRSIDaywise
+  getLiveRSIDaywise,
+  getTop200DRSI
 };
