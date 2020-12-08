@@ -493,7 +493,7 @@ const getIndexData = async () => {
 
 const getShortCandidates = async (sell = true) => {
   try {
-    const indexProm = await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse');
+    const indexProm = await fetch('https://etmarketsapis.indiatimes.com/ET_Stats/getAllIndices?exchange=nse&pagesize=1000');
     const Data = await indexProm.json();
     const indexData = Data.searchresult.map(i => {
       return {
