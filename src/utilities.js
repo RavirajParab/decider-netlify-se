@@ -320,6 +320,35 @@ const getTop200DRSI = async () => {
   const top200drsiRes = await Promise.all(top200drsiProm);
   return top200drsiRes;
 }
+
+const getTiming = async ()=>{
+  const rsiPeriod=14;
+  const nif200Url = `https://api.tickertape.in/stocks/charts/intra/.NIFTY200`;
+    const nifProm = await fetch(nif200Url);
+    const nifData = await nifProm.json();
+    const dataPoints = nifData.data[0].points;
+    const inputRSI ={
+        values : dataPoints.map(i=>i.lp),
+        period:rsiPeriod
+    }
+    const result = RSI.calculate(inputRSI);
+    const compositeRSIData = result.map((i,index)=>{
+        return {
+            RSI : i,
+            TS : new Date(dataPoints[index+rsiPeriod].ts).toLocaleTimeString(),
+            TSZ : dataPoints[index+rsiPeriod].ts,
+            LP : dataPoints[index+rsiPeriod].lp
+        }
+    });
+    const shortTingOpps = compositeRSIData.filter(i=>i.RSI>70);
+    const buyingOpps = compositeRSIData.filter(i=>i.RSI<28);
+    return {
+      shortingOpps: shortTingOpps,
+      buyingOpps: buyingOpps
+    }
+}
+
+
 const getQuote = async (req) => {
   const url = `https://quotes-api.tickertape.in/quotes?sids=${req.queryStringParameters.sid}`;
   const resprom = await fetch(url);
@@ -578,6 +607,7 @@ module.exports = {
   getAVD,
   getMMI,
   getQuote,
+  getTiming,
   getRSIForAllTopCompanies,
   getNiftyHundredETData,
   getNiftyETFData,
