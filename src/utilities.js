@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import lodash from "lodash";
 const { RSI } = require("technicalindicators");
+const ISTOffset = 330;   // IST offset UTC +5:30 
 const fixToDecimal = (data) => {
   if (data) {
     return Number(data.toFixed(2));
@@ -335,8 +336,7 @@ const getTiming = async ()=>{
     const compositeRSIData = result.map((i,index)=>{
         return {
             RSI : i,
-            TS : new Date(dataPoints[index+rsiPeriod].ts).toLocaleTimeString(),
-            TSZ : dataPoints[index+rsiPeriod].ts,
+            TS : dataPoints[index+rsiPeriod].ts,
             LP : dataPoints[index+rsiPeriod].lp
         }
     });
