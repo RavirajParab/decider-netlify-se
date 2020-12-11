@@ -352,7 +352,7 @@ const getSBOppsForSID =async (sid)=>{
 }
 
 const getTiming = async ()=>{
-  const indices=["NIFTYAUTO","NIFTYPSU","NIFTYMED","NIFTYFIN","NSEBANK","NIFTYIT",
+  const indices=["NIFTY200","NIFTYAUTO","NIFTYPSU","NIFTYMED","NIFTYFIN","NSEBANK","NIFTYIT",
     "NIPHARM","NIFTYMET","NIFTYREAL","NIFTYFMCG"];
     const indicesData=indices.map(i=>getSBOppsForSID(i));
     const indicesDataRes = await Promise.all(indicesData);
