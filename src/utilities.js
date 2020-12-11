@@ -345,8 +345,8 @@ const getSBOppsForSID =async (sid)=>{
  // const bestShortOp = shortTingOpps.sort((a,b)=>b.LP-a.LP);
   return({
       sid :sid,
-      shortTingOpps:shortTingOpps.length>0?shortTingOpps[0]:[],
-      buyingOpps:buyingOpps.length>0?buyingOpps[0]:[]
+      shortTingOpps:shortTingOpps.length>0?shortTingOpps[0]:{},
+      buyingOpps:buyingOpps.length>0?buyingOpps[0]:{}
   });
   
 }
