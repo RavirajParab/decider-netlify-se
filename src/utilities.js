@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import lodash from "lodash";
 const { RSI } = require("technicalindicators");
-const ISTOffset = 330;   // IST offset UTC +5:30 
+const rsiPeriod=14;
 const fixToDecimal = (data) => {
   if (data) {
     return Number(data.toFixed(2));
@@ -322,30 +322,41 @@ const getTop200DRSI = async () => {
   return top200drsiRes;
 }
 
+const getSBOppsForSID =async (sid)=>{
+  const nif200Url = `https://api.tickertape.in/stocks/charts/intra/.${sid}`;
+  const nifProm = await fetch(nif200Url);
+  const nifData = await nifProm.json();
+  const dataPoints = nifData.data[0].points;
+  const inputRSI ={
+      values : dataPoints.map(i=>i.lp),
+      period:rsiPeriod
+  }
+  const result = RSI.calculate(inputRSI);
+  const compositeRSIData = result.map((i,index)=>{
+      return {
+          RSI : i,
+          TS : new Date(dataPoints[index+rsiPeriod].ts).toLocaleTimeString(),
+          TSZ : dataPoints[index+rsiPeriod].ts,
+          LP : dataPoints[index+rsiPeriod].lp
+      }
+  });
+  const shortTingOpps = compositeRSIData.filter(i=>i.RSI>70).sort((a,b)=>b.LP-a.LP);
+  const buyingOpps = compositeRSIData.filter(i=>i.RSI<28).sort((a,b)=>a.LP-b.LP);
+ // const bestShortOp = shortTingOpps.sort((a,b)=>b.LP-a.LP);
+  return({
+      sid :sid,
+      shortTingOpps:shortTingOpps.length>0?shortTingOpps[0]:[],
+      buyingOpps:buyingOpps.length>0?buyingOpps[0]:[]
+  });
+  
+}
+
 const getTiming = async ()=>{
-  const rsiPeriod=14;
-  const nif200Url = `https://api.tickertape.in/stocks/charts/intra/.NIFTY200`;
-    const nifProm = await fetch(nif200Url);
-    const nifData = await nifProm.json();
-    const dataPoints = nifData.data[0].points;
-    const inputRSI ={
-        values : dataPoints.map(i=>i.lp),
-        period:rsiPeriod
-    }
-    const result = RSI.calculate(inputRSI);
-    const compositeRSIData = result.map((i,index)=>{
-        return {
-            RSI : i,
-            TS : dataPoints[index+rsiPeriod].ts,
-            LP : dataPoints[index+rsiPeriod].lp
-        }
-    });
-    const shortTingOpps = compositeRSIData.filter(i=>i.RSI>70);
-    const buyingOpps = compositeRSIData.filter(i=>i.RSI<28);
-    return {
-      shortingOpps: shortTingOpps,
-      buyingOpps: buyingOpps
-    }
+  const indices=["NIFTYAUTO","NIFTYPSU","NIFTYMED","NIFTYFIN","NSEBANK","NIFTYIT",
+    "NIPHARM","NIFTYMET","NIFTYREAL","NIFTYFMCG"];
+    const indicesData=indices.map(i=>getSBOppsForSID(i));
+    const indicesDataRes = await Promise.all(indicesData);
+    return indicesDataRes;
 }
 
 
