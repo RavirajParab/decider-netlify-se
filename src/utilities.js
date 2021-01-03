@@ -515,7 +515,6 @@ const getInternalData = async (sec) => {
     const sinceBadDay = Math.ceil(sinceBadDayDiff / (1000 * 60 * 60 * 24)); 
   
     const sidFinalResult ={
-        RSIYday : sidRSI,
         MH :OneMonthHigh,
         ML: OneMonthLow,
         MR :returns1M,
@@ -524,8 +523,8 @@ const getInternalData = async (sec) => {
         SMA14 : Number((sidSMA14[sidSMA14.length-1]).toFixed(2)),
         BestDayRise :bestDay.intradayRise,
         WorstDayFall:worstDay.intradayRise,
-        VolRiseYday:lastDay.volRise,
-        IntradayRiseYday : lastDay.intradayRise,
+        VolRise:lastDay.volRise,
+        IntradayRise : lastDay.intradayRise,
         BadDayBefore :sinceBadDay,
         GoodDayBefore: sinceGoodDay,
         SID:sec.sid
