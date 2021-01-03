@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import lodash from "lodash";
 const { RSI } = require("technicalindicators");
+const {SMA} =require('technicalindicators');
 const rsiPeriod=14;
 const fixToDecimal = (data) => {
   if (data) {
@@ -464,31 +465,87 @@ const getNiftyETFData = async () => {
 }
 const getInternalData = async (sec) => {
   try {
-    const urlData = await fetch(`https://api.tickertape.in/stockwidget/internal/${sec.sid}`);
-    const rawData = await urlData.json();
-    const data = rawData.data;
-    const secData = {
-      name: data.info.name,
-      ticker: data.info.ticker,
-      sector: data.info.gic.sector,
-      yearHigh: data.ratios['52wHigh'],
-      yearLow: data.ratios['52wLow'],
-      pe: fixToDecimal(data.ratios.pe),
-      beta: fixToDecimal(data.ratios.beta),
-      mcap: data.ratios.marketCap,
-      monthReturns: fixToDecimal(data.ratios.returns['1m']),
-      yearReturns: fixToDecimal(data.ratios.returns['1y']),
-      historical: data.historical,
-      quote: sec
+    const url = `https://api.tickertape.in/stocks/charts/inter/${sec.sid}?duration=1mo`;
+    const promUrl =await  fetch(url);
+    const data = await promUrl.json();
+    const sidData = data.data;
+    const returns1M =Number(sidData[0].r.toFixed(2));
+    const OneMonthLow =sidData[0].l;
+    const OneMonthHigh =sidData[0].h;
+    const dataPoints =sidData[0].points;
+    
+    const filteredData = dataPoints.filter(i=>(i.ts.indexOf('T03:59:00.000Z')>0 )
+                                           || (i.ts.indexOf('T09:59:00.000Z')>0)         
+                                    ).map(j=>{
+                                        return{
+                                            ...j,
+                                            date : j.ts.split('T')[0]
+                                        }
+                                    });
+    const sidDayWiseData=[];
+    for (let index = 0; index < filteredData.length; index=index+2) {
+        const elementStart = filteredData[index];
+        const elementEnd = filteredData[index+1];
+        const item ={
+            startPrice:elementStart.lp,
+            endPrice :elementEnd.lp,
+            priceDiff:Number((elementEnd.lp-elementStart.lp).toFixed(2)),
+            intradayRise:Number(((elementEnd.lp-elementStart.lp)*100/elementEnd.lp).toFixed(2)),
+            volRise:Number(((elementEnd.v-elementStart.v)*100/elementEnd.v).toFixed(2)),
+            date : elementStart.date,
+        }
+        sidDayWiseData.push(item);
+    }  ;
+
+    const inputRSI ={
+        values : sidDayWiseData.map(i=>i.endPrice),
+        period:rsiPeriod
     }
-    return secData;
+    const result = RSI.calculate(inputRSI);
+    const sidRSI = result[result.length-2];
+    
+    const sidSMA5=SMA.calculate({period : 5, values : sidDayWiseData.map(i=>i.endPrice)});
+    const sidSMA8=SMA.calculate({period : 8, values : sidDayWiseData.map(i=>i.endPrice)});
+    const sidSMA14=SMA.calculate({period : 14, values : sidDayWiseData.map(i=>i.endPrice)});
+    sidDayWiseData.pop(); 
+    const lastDay =sidDayWiseData[sidDayWiseData.length-1];
+    const sidDayWiseBasedOnGain = sidDayWiseData.sort((a,b)=>(a.intradayRise-b.intradayRise));
+    const worstDay= sidDayWiseBasedOnGain[0];
+    const bestDay = sidDayWiseBasedOnGain[sidDayWiseBasedOnGain.length-1];
+    //do the best and worst day ago
+    const today = new Date();
+    const worstDayDate = new Date(worstDay.date);
+    const bestDayDate = new Date(bestDay.date);
+    const sinceBadDayDiff = Math.abs(today - worstDayDate);
+    const sinceBestDayDiff = Math.abs(today - bestDayDate);
+    const sinceGoodDay = Math.ceil(sinceBestDayDiff / (1000 * 60 * 60 * 24)); 
+    const sinceBadDay = Math.ceil(sinceBadDayDiff / (1000 * 60 * 60 * 24)); 
+  
+    const sidFinalResult ={
+        RSIYday : sidRSI,
+        MH :OneMonthHigh,
+        ML: OneMonthLow,
+        MR :returns1M,
+        SMA5 : Number((sidSMA5[sidSMA5.length-2]).toFixed(2)),
+        SMA8 : Number((sidSMA8[sidSMA8.length-2]).toFixed(2)),
+        SMA14 : Number((sidSMA14[sidSMA14.length-2]).toFixed(2)),
+        BestDayRise :bestDay.intradayRise,
+        WorstDayFall:worstDay.intradayRise,
+        VolRiseYday:lastDay.volRise,
+        IntradayRiseYday : lastDay.intradayRise,
+        BadDayBefore :sinceBadDay,
+        GoodDayBefore: sinceGoodDay,
+        SID:sec.sid
+    }   
+          return sidFinalResult;      
   } catch (err) {
     console.log(`Failed for `, sec.sid);
   }
 }
 
 const getAllQuotes = async () => {
-  const allQuotesProm = await fetch(`https://quotes-api.tickertape.in/quotes?sids=ADIA,AFFL,ADRG,ARTI,ACC,ADNA,ADAI,ADEN,ADTB,APSE,ABB,AEGS,ADEL,TMIN,ABOT,AIAE,ADAG,AVAS,AMAR,AJPH,ALKY,APLO,AMBE,ABUJ,ALKE,ALMC,ACLL,ALEM,APLH,AKZO,ALOK,APLA,ABDL,ASTR,ASPT,ATRD,ATLP,AXBK,ARBN,ASPN,AUFI,AVNT,ASOK,BARA,BFRG,BACO,BJFS,BRGR,BATA,BAJA,BLKI,BLMR,BACH,BANH,BEML,BOI,BOB,BBRM,BJFN,BAYE,BJEL,BJAT,BASF,BAJE,BDYN,BRIG,BLIS,BIRS,BLDT,BRIT,BION,BRLC,CNFH,BHEL,BOSH,BRTI,BLUS,BSEL,BRSN,CNBK,BPCL,CADI,CNTP,CENA,CAPG,CHAL,CRBR,CEAT,CESC,CREI,CIPL,CAPL,CCLP,COAL,CNTY,CORF,CAST,CHPC,COFO,COLG,CCRI,CHOL,COCH,CBI,CHMB,CHLA,CERA,DABU,CYIE,DALB,DPNT,CUMM,DELT,CSBB,DIBL,DSHM,DHNP,CRSL,CROP,DBCL,DCMS,CRDE,CTBK,DCBA,AVEU,DLF,ELGE,DSTV,DIXO,ECLE,EIHO,EIDP,EDEL,REDY,EMAM,DIVI,EICH,GUJL,ENGI,FNXC,FTRE,FINX,ESAB,ESCO,FRTL,GAME,GAIL,ERIS,FOHE,FISO,FED,FINO,EQHL,ENDU,FDC,ESSL,EXID,GMMP,GEPO,GRWL,GHCH,GDFR,GALX,GODE,GILE,GLEN,GNFC,GENA,GESC,GMDC,GOCP,GMRI,GLAX,GODI,GODR,HIAE,GRAN,GRNN,GRSE,HAPL,GSPT,GGAS,HVEL,GALK,GOLU,GRAS,GSFC,HAWY,GPPL,GRPH,GRVL,HALC,HUDC,HPCL,HDFC,HZNC,HDBK,INRL,HDFL,HCPR,HIMD,INBF,HCLT,HEFI,HLL,HEGL,HFCL,HROM,HDFA,HEID,HONE,ICBK,VODA,IDBI,IDFB,IFBI,IGAS,ICMN,INBA,INDB,ICIL,IDFC,INGL,INRM,ICIR,IIFL,IHTL,IIFW,IIAN,ICRA,INMR,IFIB,IRCN,IOLC,ITEL,JKBK,INIR,ICCI,ITC,BHRI,IOBK,INGR,JAGP,INFY,JAIC,INBK,IRBI,JMNA,INOL,IOC,IPCA,JIST,JUBI,KANE,JIND,JKCE,JSTL,JUST,JCHA,JSWE,JYOI,JINA,JBCH,JKLC,JTEK,KAPT,JMSH,KAJR,JKIN,JNSP,JKPA,KEIN,KTKM,KARU,KECL,KNRL,KOLT,KRBL,LAOP,LART,DLPA,LUXI,MMFS,LRTI,LAUL,LKMC,KSBL,LIND,KVRI,LICH,MAHM,KBNK,LEMO,LTEH,LTFH,LUPN,MCEI,MRCO,MHSC,MHSM,BMBK,MALO,MNFL,UNSP,MRTI,MASF,METP,MOIL,MMTC,MOSS,MRPL,MINT,MAXI,MAHH,MINC,MOFS,MBFL,MISR,MRF,MNDA,MGAS,NHPC,NAVN,NBCC,NARY,NAFL,NALU,NATP,NAFT,MUTT,NIPF,NCCL,NEST,INED,NSEN,THEE,NOCI,OILI,ORCL,ORCE,NMDC,ONGC,NLCI,OEBO,ORRE,NKML,NTPC,ONTE,OMAX,PAGE,PWFC,PIRA,PROC,PHOE,PIDI,PLNG,PERS,HUHT,PNBK,PROR,PHIL,PIIL,PFIZ,PNBH,PREG,PGRD,PNCI,ABBW,PSPP,PRAJ,PLYP,POLC,PVRL,QUEC,PRIS,PLMD,PTCI,RADC,RATB,RYMD,RELI,RITS,REXP,RSTC,RLXO,RALL,REDI,RECM,RAID,TRCE,RMT,SAIL,SBIC,RAIV,SANO,SBI,SCHE,SHOP,SEIN,SHEF,SHME,SHCM,SBIL,SEQU,SCI,SHCU,SLIN,SPRC,SIEM,SIBK,SECR,SKFB,SOBH,SOLA,SJVN,SOFT,STAT,SRTR,SDCH,SNFN,SUNT,SUN,SUPE,SPJT,SUMH,SUTV,SRFL,SNFS,SRID,STTE,SUPI,SPTL,TTPW,TTEX,TISC,SUVH,TABE,SYMP,TTCH,SUZL,TATA,TAMdv,TATS,TCNS,TCIE,STEN,SWAR,TACO,SYNN,TACN,TAMO,SWAN,TCS,TINV,TLSV,TEML,TITN,TOPO,TRIE,THYO,TVEB,THMX,TVTO,UCBK,TTKL,TORP,TVSM,UBBW,TREN,TBEI,TIMK,UJVF,UJJI,UPLL,VARB,ULTC,VGUA,UNBK,VENK,VAKR,UFLX,VAIB,VARE,WHIR,WGSR,VNTI,VIPI,VMAR,WEST,WABC,VRLL,WIPR,WCKH,VSTI,WLSP,VART,VOLT,ZYDS,ZEE,ZENT,YESB`);
+  //const allQuotesProm = await fetch(`https://quotes-api.tickertape.in/quotes?sids=ADIA,AFFL,ADRG,ARTI,ACC,ADNA,ADAI,ADEN,ADTB,APSE,ABB,AEGS,ADEL,TMIN,ABOT,AIAE,ADAG,AVAS,AMAR,AJPH,ALKY,APLO,AMBE,ABUJ,ALKE,ALMC,ACLL,ALEM,APLH,AKZO,ALOK,APLA,ABDL,ASTR,ASPT,ATRD,ATLP,AXBK,ARBN,ASPN,AUFI,AVNT,ASOK,BARA,BFRG,BACO,BJFS,BRGR,BATA,BAJA,BLKI,BLMR,BACH,BANH,BEML,BOI,BOB,BBRM,BJFN,BAYE,BJEL,BJAT,BASF,BAJE,BDYN,BRIG,BLIS,BIRS,BLDT,BRIT,BION,BRLC,CNFH,BHEL,BOSH,BRTI,BLUS,BSEL,BRSN,CNBK,BPCL,CADI,CNTP,CENA,CAPG,CHAL,CRBR,CEAT,CESC,CREI,CIPL,CAPL,CCLP,COAL,CNTY,CORF,CAST,CHPC,COFO,COLG,CCRI,CHOL,COCH,CBI,CHMB,CHLA,CERA,DABU,CYIE,DALB,DPNT,CUMM,DELT,CSBB,DIBL,DSHM,DHNP,CRSL,CROP,DBCL,DCMS,CRDE,CTBK,DCBA,AVEU,DLF,ELGE,DSTV,DIXO,ECLE,EIHO,EIDP,EDEL,REDY,EMAM,DIVI,EICH,GUJL,ENGI,FNXC,FTRE,FINX,ESAB,ESCO,FRTL,GAME,GAIL,ERIS,FOHE,FISO,FED,FINO,EQHL,ENDU,FDC,ESSL,EXID,GMMP,GEPO,GRWL,GHCH,GDFR,GALX,GODE,GILE,GLEN,GNFC,GENA,GESC,GMDC,GOCP,GMRI,GLAX,GODI,GODR,HIAE,GRAN,GRNN,GRSE,HAPL,GSPT,GGAS,HVEL,GALK,GOLU,GRAS,GSFC,HAWY,GPPL,GRPH,GRVL,HALC,HUDC,HPCL,HDFC,HZNC,HDBK,INRL,HDFL,HCPR,HIMD,INBF,HCLT,HEFI,HLL,HEGL,HFCL,HROM,HDFA,HEID,HONE,ICBK,VODA,IDBI,IDFB,IFBI,IGAS,ICMN,INBA,INDB,ICIL,IDFC,INGL,INRM,ICIR,IIFL,IHTL,IIFW,IIAN,ICRA,INMR,IFIB,IRCN,IOLC,ITEL,JKBK,INIR,ICCI,ITC,BHRI,IOBK,INGR,JAGP,INFY,JAIC,INBK,IRBI,JMNA,INOL,IOC,IPCA,JIST,JUBI,KANE,JIND,JKCE,JSTL,JUST,JCHA,JSWE,JYOI,JINA,JBCH,JKLC,JTEK,KAPT,JMSH,KAJR,JKIN,JNSP,JKPA,KEIN,KTKM,KARU,KECL,KNRL,KOLT,KRBL,LAOP,LART,DLPA,LUXI,MMFS,LRTI,LAUL,LKMC,KSBL,LIND,KVRI,LICH,MAHM,KBNK,LEMO,LTEH,LTFH,LUPN,MCEI,MRCO,MHSC,MHSM,BMBK,MALO,MNFL,UNSP,MRTI,MASF,METP,MOIL,MMTC,MOSS,MRPL,MINT,MAXI,MAHH,MINC,MOFS,MBFL,MISR,MRF,MNDA,MGAS,NHPC,NAVN,NBCC,NARY,NAFL,NALU,NATP,NAFT,MUTT,NIPF,NCCL,NEST,INED,NSEN,THEE,NOCI,OILI,ORCL,ORCE,NMDC,ONGC,NLCI,OEBO,ORRE,NKML,NTPC,ONTE,OMAX,PAGE,PWFC,PIRA,PROC,PHOE,PIDI,PLNG,PERS,HUHT,PNBK,PROR,PHIL,PIIL,PFIZ,PNBH,PREG,PGRD,PNCI,ABBW,PSPP,PRAJ,PLYP,POLC,PVRL,QUEC,PRIS,PLMD,PTCI,RADC,RATB,RYMD,RELI,RITS,REXP,RSTC,RLXO,RALL,REDI,RECM,RAID,TRCE,RMT,SAIL,SBIC,RAIV,SANO,SBI,SCHE,SHOP,SEIN,SHEF,SHME,SHCM,SBIL,SEQU,SCI,SHCU,SLIN,SPRC,SIEM,SIBK,SECR,SKFB,SOBH,SOLA,SJVN,SOFT,STAT,SRTR,SDCH,SNFN,SUNT,SUN,SUPE,SPJT,SUMH,SUTV,SRFL,SNFS,SRID,STTE,SUPI,SPTL,TTPW,TTEX,TISC,SUVH,TABE,SYMP,TTCH,SUZL,TATA,TAMdv,TATS,TCNS,TCIE,STEN,SWAR,TACO,SYNN,TACN,TAMO,SWAN,TCS,TINV,TLSV,TEML,TITN,TOPO,TRIE,THYO,TVEB,THMX,TVTO,UCBK,TTKL,TORP,TVSM,UBBW,TREN,TBEI,TIMK,UJVF,UJJI,UPLL,VARB,ULTC,VGUA,UNBK,VENK,VAKR,UFLX,VAIB,VARE,WHIR,WGSR,VNTI,VIPI,VMAR,WEST,WABC,VRLL,WIPR,WCKH,VSTI,WLSP,VART,VOLT,ZYDS,ZEE,ZENT,YESB`);
+  const allQuotesProm = await fetch(`https://quotes-api.tickertape.in/quotes?sids=ABOT,ACC,ADNA,APSE,ADAI,ALKE,ABUJ,ASPN,ARBN,AXBK,BAJA,BJFS,BJAT,BJFN,BANH,BOB,BRGR,BRTI,BION,BOSH,BPCL,BRIT,CADI,CIPL,COAL,COLG,CCRI,DABU,DIVI,DLF,AVEU,REDY,EICH,GAIL,GENA,GOCP,GRAS,HVEL,HCLT,HDFC,HDFA,HDBK,HDFL,HROM,HALC,HPCL,HLL,HZNC,ICBK,ICIL,ICIR,IGAS,INGL,INBK,BHRI,INFY,IOC,ITC,JSTL,KTKM,LART,LRTI,LUPN,MAHM,MRCO,MRTI,UNSP,MOSS,MUTT,INED,NEST,NMDC,NTPC,ORCL,ONGC,PIRA,PLNG,PWFC,PROC,PIDI,PNBK,PGRD,RELI,SBIC,SBIL,SBI,SHCM,SIEM,SUN,TACN,TAMO,TISC,TCS,TEML,TITN,TORP,UBBW,ULTC,UPLL,WIPR`);
   const dataRaw = await allQuotesProm.json();
   const alldata = dataRaw.data.map(i => getInternalData(i));
   const resolvedData = await Promise.all(alldata);
