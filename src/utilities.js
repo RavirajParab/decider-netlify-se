@@ -486,7 +486,8 @@ const getInternalData = async (sec) => {
     for (let index = 0; index < filteredData.length; index=index+2) {
         const elementStart = filteredData[index];
         const elementEnd = filteredData[index+1];
-        const item ={
+        if(elementStart && elementEnd){
+          const item ={
             startPrice:elementStart.lp,
             endPrice :elementEnd.lp,
             priceDiff:Number((elementEnd.lp-elementStart.lp).toFixed(2)),
@@ -495,6 +496,7 @@ const getInternalData = async (sec) => {
             date : elementStart.date,
         }
         sidDayWiseData.push(item);
+        } 
     } ;
     
     const sidSMA5=SMA.calculate({period : 5, values : sidDayWiseData.map(i=>i.endPrice)});
@@ -527,7 +529,8 @@ const getInternalData = async (sec) => {
         IntradayRise : lastDay.intradayRise,
         BadDayBefore :sinceBadDay,
         GoodDayBefore: sinceGoodDay,
-        SID:sec.sid
+        SID:sec.sid,
+        Date : lastDay.date
     }   
           return sidFinalResult;      
   } catch (err) {
