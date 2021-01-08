@@ -205,6 +205,7 @@ const getSecRSI = async (symbol) => {
       Date: currentData.Date,
       Open: currentData.Open,
       Close: currentData.Close,
+      IR: Number((((currentData.Close- currentData.Open)*100)/currentData.Close).toFixed(2)),
       PreviousClose: data[13].Close,
       YesterdayChange: Number(
         (((data[13].Close - data[12].Close) * 100) / data[12].Close).toFixed(
