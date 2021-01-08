@@ -201,7 +201,6 @@ const getSecRSI = async (symbol) => {
   if (currentData) {
     return {
       Symbol: symbol,
-      WRSI:RSI.calculate(inputRSI),
       RSI: RSI.calculate(inputRSI)[0],
       Date: currentData.Date,
       Open: currentData.Open,
