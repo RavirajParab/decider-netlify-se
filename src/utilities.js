@@ -201,11 +201,15 @@ const getSecRSI = async (symbol) => {
   if (currentData) {
     return {
       Symbol: symbol,
+      WRSI:RSI.calculate(inputRSI),
       RSI: RSI.calculate(inputRSI)[0],
       Date: currentData.Date,
       Open: currentData.Open,
       Close: currentData.Close,
+      POpen :data[13].Open,
+      PClose :data[13].Close,
       IR: Number((((currentData.Close- currentData.Open)*100)/currentData.Close).toFixed(2)),
+      PIR: Number((((data[13].Close- data[13].Open)*100)/data[13].Close).toFixed(2)),
       PreviousClose: data[13].Close,
       YesterdayChange: Number(
         (((data[13].Close - data[12].Close) * 100) / data[12].Close).toFixed(
