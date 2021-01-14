@@ -3,7 +3,7 @@ import lodash from "lodash";
 const { RSI } = require("technicalindicators");
 const {SMA} =require('technicalindicators');
 const rsiPeriod=14;
-const datePart=new Date().toISOString().split('T');
+
 const fixToDecimal = (data) => {
   if (data) {
     return Number(data.toFixed(2));
@@ -228,7 +228,7 @@ const getSecRSI = async (symbol) => {
       IR: Number((((currentData.Close- currentData.Open)*100)/currentData.Close).toFixed(2)),
       PIR: Number((((data[13].Close- data[13].Open)*100)/data[13].Close).toFixed(2)),
       PreviousClose: data[13].Close,
-      YesterdayChange: Number(
+      PChange: Number(
         (((data[13].Close - data[12].Close) * 100) / data[12].Close).toFixed(
           2
         )
@@ -238,8 +238,16 @@ const getSecRSI = async (symbol) => {
           2
         )
       ),
+      PChange14: Number(
+        (((data[13].Close - data[0].Close) * 100) / data[0].Close).toFixed(2)
+      ),
       Change14: Number(
         (((currentData.Close - data[0].Close) * 100) / data[0].Close).toFixed(2)
+      ),
+      PChange5: Number(
+        (((data[13].Close  - data[9].Close) * 100) / data[9].Close).toFixed(
+          2
+        )
       ),
       Change5: Number(
         (((currentData.Close - data[10].Close) * 100) / data[10].Close).toFixed(
