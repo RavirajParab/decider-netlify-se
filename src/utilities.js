@@ -3,6 +3,7 @@ import lodash from "lodash";
 const { RSI } = require("technicalindicators");
 const {SMA} =require('technicalindicators');
 const rsiPeriod=14;
+const datePart=new Date().toISOString().split('T');
 const fixToDecimal = (data) => {
   if (data) {
     return Number(data.toFixed(2));
@@ -189,8 +190,22 @@ const MatchPatterns = [
 ];
 
 const getSecRSI = async (symbol) => {
-  const data = await getSecDataForDays(symbol, 30);
+  const data = await getSecDataForDays(symbol, 45);
   const itemsToBeRemoved = data.length - 15;
+  //save the month data
+  const monthData =[...data];
+  monthData.pop();
+  const mitemsToBeRemoved = monthData.length - 30;
+  monthData.splice(0, mitemsToBeRemoved);
+  const pMClosings = monthData.map((i) => Number(i.Close));
+  
+  const pASMA5=SMA.calculate({period : 5, values : pMClosings});
+  const pASMA8=SMA.calculate({period : 8, values : pMClosings});
+  const pASMA14=SMA.calculate({period : 14,  values : pMClosings});
+  const pSMA5 =pASMA5[pASMA5.length-1];
+  const pSMA8 =pASMA8[pASMA8.length-1];
+  const pSMA14 =pASMA14[pASMA14.length-1];
+  //monthly logic ends here
   data.splice(0, itemsToBeRemoved);
   const closings = data.map((i) => i.Close);
   const inputRSI = {
@@ -202,6 +217,9 @@ const getSecRSI = async (symbol) => {
     return {
       Symbol: symbol,
       RSI: RSI.calculate(inputRSI)[0],
+      pSMA5:Number(pSMA5.toFixed(2)),
+      pSMA8:Number(pSMA8.toFixed(2)),
+      pSMA14:Number(pSMA14.toFixed(2)),
       Date: currentData.Date,
       Open: currentData.Open,
       Close: currentData.Close,
@@ -237,7 +255,7 @@ const getSecRSI = async (symbol) => {
 
 const getRSIForAllTopCompanies = async () => {
   const allTop200Companies = await getTop200Companies();
-  const allTopRSIPromise = allTop200Companies.map((i) => getSecRSI(i.Symbol));
+  const allTopRSIPromise = allTop200Companies.map(i =>getSecRSI(i.Symbol));
   const rsiData = await Promise.all(allTopRSIPromise);
   return rsiData;
 };
@@ -544,7 +562,7 @@ const getInternalData = async (sec) => {
     const returns1M =Number(sidData[0].r.toFixed(2));
     const OneMonthLow =sidData[0].l;
     const OneMonthHigh =sidData[0].h;
-    const dataPoints =sidData[0].points;
+    const dataPoints =sidData[0].points;//.filter(i=>i.ts.indexOf(datePart)<0);
     
     const filteredData = dataPoints.filter(i=>(i.ts.indexOf('T03:59:00.000Z')>0 )
                                            || (i.ts.indexOf('T09:59:00.000Z')>0)         
@@ -554,10 +572,22 @@ const getInternalData = async (sec) => {
                                             date : j.ts.split('T')[0]
                                         }
                                     });
+                                    
+                                                               
     const sidDayWiseData=[];
-    for (let index = 0; index < filteredData.length; index=index+2) {
+  //  console.log(filteredData[0])
+    console.log(filteredData)
+    console.log('----')
+    for (let index = 0; index < filteredData.length; index++) {
+       if(index%2==0){
+         
         const elementStart = filteredData[index];
         const elementEnd = filteredData[index+1];
+        if(index==filteredData.length-1 ||index==filteredData.length-2){
+          console.log(elementStart);
+          console.log(elementEnd);
+        }
+        
         if(elementStart && elementEnd){
           const item ={
             startPrice:elementStart.lp,
@@ -569,8 +599,9 @@ const getInternalData = async (sec) => {
         }
         sidDayWiseData.push(item);
         } 
+       }
     } ;
-    
+    //console.log(sidDayWiseData);  
     const sidSMA5=SMA.calculate({period : 5, values : sidDayWiseData.map(i=>i.endPrice)});
     const sidSMA8=SMA.calculate({period : 8, values : sidDayWiseData.map(i=>i.endPrice)});
     const sidSMA14=SMA.calculate({period : 14, values : sidDayWiseData.map(i=>i.endPrice)});
@@ -611,7 +642,8 @@ const getInternalData = async (sec) => {
 }
 
 const getAllQuotes = async () => {
-  const allQuotesProm = await fetch(`https://quotes-api.tickertape.in/quotes?sids=ABOT,ACC,ADNA,APSE,ADAI,ALKE,ABUJ,ASPN,ARBN,AXBK,BAJA,BJFS,BJAT,BJFN,BANH,BOB,BRGR,BRTI,BION,BOSH,BPCL,BRIT,CADI,CIPL,COAL,COLG,CCRI,DABU,DIVI,DLF,AVEU,REDY,EICH,GAIL,GENA,GOCP,GRAS,HVEL,HCLT,HDFC,HDFA,HDBK,HDFL,HROM,HALC,HPCL,HLL,HZNC,ICBK,ICIL,ICIR,IGAS,INGL,INBK,BHRI,INFY,IOC,ITC,JSTL,KTKM,LART,LRTI,LUPN,MAHM,MRCO,MRTI,UNSP,MOSS,MUTT,INED,NEST,NMDC,NTPC,ORCL,ONGC,PIRA,PLNG,PWFC,PROC,PIDI,PNBK,PGRD,RELI,SBIC,SBIL,SBI,SHCM,SIEM,SUN,TACN,TAMO,TISC,TCS,TEML,TITN,TORP,UBBW,ULTC,UPLL,WIPR`);
+ // const allQuotesProm = await fetch(`https://quotes-api.tickertape.in/quotes?sids=ABOT,ACC,ADNA,APSE,ADAI,ALKE,ABUJ,ASPN,ARBN,AXBK,BAJA,BJFS,BJAT,BJFN,BANH,BOB,BRGR,BRTI,BION,BOSH,BPCL,BRIT,CADI,CIPL,COAL,COLG,CCRI,DABU,DIVI,DLF,AVEU,REDY,EICH,GAIL,GENA,GOCP,GRAS,HVEL,HCLT,HDFC,HDFA,HDBK,HDFL,HROM,HALC,HPCL,HLL,HZNC,ICBK,ICIL,ICIR,IGAS,INGL,INBK,BHRI,INFY,IOC,ITC,JSTL,KTKM,LART,LRTI,LUPN,MAHM,MRCO,MRTI,UNSP,MOSS,MUTT,INED,NEST,NMDC,NTPC,ORCL,ONGC,PIRA,PLNG,PWFC,PROC,PIDI,PNBK,PGRD,RELI,SBIC,SBIL,SBI,SHCM,SIEM,SUN,TACN,TAMO,TISC,TCS,TEML,TITN,TORP,UBBW,ULTC,UPLL,WIPR`);
+ const allQuotesProm = await fetch(`https://quotes-api.tickertape.in/quotes?sids=ABOT`);
   const dataRaw = await allQuotesProm.json();
   const alldata = dataRaw.data.map(i => getInternalData(i));
   const resolvedData = await Promise.all(alldata);
