@@ -389,12 +389,79 @@ const getQuote = async (req) => {
   return finalData;
 };
 
+
+const calculateRise =(a,b)=>{
+  return  Number((((a.lp-b.lp)*100)/a.lp).toFixed(2));
+}
+
+const getTrend=(dataPoints)=>{
+  const index = dataPoints.length;
+  const pStart=dataPoints[0];
+  let p5min; let First5MinR;
+  let p15min; let First15MinR;
+  let p11am;  let FirstSessionR;
+  let p1230pm; let SecondSessionR;
+  let p2pm; let ThirdSessionR;
+  let pLast; let FourthSessionR;
+  if(index<6){
+      First5MinR = calculateRise(dataPoints[index-1],pStart);
+  }
+  if(index>5){
+      p5min = dataPoints[5];
+      First5MinR = calculateRise(p5min,pStart);
+      if(index<15){
+          First15MinR = calculateRise(dataPoints[index-1],pStart);
+      }
+  }
+  if(index>14){
+      p15min = dataPoints[14];
+      First15MinR = calculateRise(p15min,pStart);
+      if(index<105){
+          FirstSessionR = calculateRise(dataPoints[index-1],p15min);
+      }
+  }
+  if(index>104){
+      p11am = dataPoints[104];
+      FirstSessionR = calculateRise(p11am,p15min);
+      if(index<195){
+          SecondSessionR = calculateRise(dataPoints[index-1],p11am);
+      }
+  }
+  if(index>194){
+      p1230pm = dataPoints[194];
+      SecondSessionR = calculateRise(p1230pm,p11am);
+      if(index<285){
+          ThirdSessionR = calculateRise(dataPoints[index-1],p1230pm);
+      }
+  }
+  if(index>284){
+      p2pm=dataPoints[284];
+      ThirdSessionR = calculateRise(p2pm,p1230pm);
+      if(index<361){
+          FourthSessionR = calculateRise(dataPoints[index-1],p2pm);
+      }
+  }
+  if(index>360){
+      pLast=dataPoints[284];
+      FourthSessionR = calculateRise(pLast,p2pm);
+  }
+  return{
+      First5MinR,
+      First15MinR,
+      FirstSessionR,
+      SecondSessionR,
+      ThirdSessionR,
+      FourthSessionR
+  }
+}
+
 const getLiveRSIDaywise = async (req) => {
   const timePeriodRSI = 14;
   const url = `https://api.tickertape.in/stocks/charts/intra/${req.queryStringParameters.sid}`;
   const rawData = await fetch(url);
   const data = await rawData.json();
   const finalData = data.data[0].points;
+  const trend = getTrend(finalData);
   const prices = finalData.map(i => i.lp);
   const inputRSI = {
     values: prices,
@@ -406,7 +473,8 @@ const getLiveRSIDaywise = async (req) => {
       RSI: i,
       Price: finalData[index + timePeriodRSI].lp,
       TS: (new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
-      SID: req.queryStringParameters.sid
+      SID: req.queryStringParameters.sid,
+      Trend : trend
     }
     return data;
   });
