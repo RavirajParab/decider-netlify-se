@@ -443,7 +443,7 @@ const getTrend=(dataPoints)=>{
   }
   if(index>360){
       pLast=dataPoints[284];
-      FourthSessionR = calculateRise(pLast,p2pm);
+      FourthSessionR = calculateRise(dataPoints[index-1],p2pm);
   }
   return{
       First5MinR,
