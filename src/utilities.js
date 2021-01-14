@@ -460,7 +460,7 @@ const getLiveRSIDaywise = async (req) => {
   const url = `https://api.tickertape.in/stocks/charts/intra/${req.queryStringParameters.sid}`;
   const rawData = await fetch(url);
   const data = await rawData.json();
-  const finalData = data.data[0].points;
+  const finalData = data.data[0].points.filter(i=>i!==undefined);
   const trend = getTrend(finalData);
   const prices = finalData.map(i => i.lp);
   const inputRSI = {
