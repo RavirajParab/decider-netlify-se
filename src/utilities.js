@@ -225,6 +225,7 @@ const getSecRSI = async (symbol) => {
       Close: currentData.Close,
       POpen :data[13].Open,
       PClose :data[13].Close,
+      SSL1:currentData.High- currentData.Close,
       SSL:Number((Number(currentData.High) -Number(currentData.Close)).toFixed(2)),
       BSL:Number((Number(currentData.Close) -Number(currentData.Low)).toFixed(2)),
       LQTY : (100000/Number(currentData.Close)).toFixed(2),
