@@ -336,22 +336,6 @@ const deriveMessageValues = (message) => {
   }
 }
 
-const getTop200DRSI = async () => {
-  const nifty200url = `https://api.tickertape.in/indices/info/.NIFTY200`;
-  const nifty200prom = await fetch(nifty200url);
-  const nifty200Data = await nifty200prom.json();
-  const top200sids = nifty200Data.data.constituents;
-  const top200drsiProm = top200sids.map(i => {
-    let myReq = {
-      queryStringParameters: {
-        sid: i
-      }
-    };
-    return getLiveRSIDaywise(myReq);
-  });
-  const top200drsiRes = await Promise.all(top200drsiProm);
-  return top200drsiRes;
-}
 
 const getSBOppsForSID =async (sid)=>{
   const nif200Url = `https://api.tickertape.in/stocks/charts/intra/.${sid}`;
@@ -413,6 +397,21 @@ const getQuote = async (req) => {
     }
   });
   return finalData;
+};
+
+
+const getDRSI = async (req) => {
+  const cosSIDs = req.queryStringParameters.sid.split(',');
+  const DRSIProm = cosSIDs.map(n => {
+    let myReq = {
+      queryStringParameters: {
+        sid: n
+      }
+    };
+    return getLiveRSIDaywise(myReq);
+  });
+  const DRISData = await Promise.all(DRSIProm);
+  return DRISData;
 };
 
 
@@ -488,6 +487,9 @@ const getLiveRSIDaywise = async (req) => {
   const data = await rawData.json();
   const finalData = data.data[0].points.filter(i=>i!==undefined);
   const trend = getTrend(finalData);
+  const lp =finalData[finalData.length-1].lp;
+  const sp = finalData[0].lp
+  const IR = Number(((lp-sp)*100/lp).toFixed(2));
   const prices = finalData.map(i => i.lp);
   const inputRSI = {
     values: prices,
@@ -497,6 +499,7 @@ const getLiveRSIDaywise = async (req) => {
   const compositeData = RSIResult.map((i, index) => {
     const data = {
       RSI: i,
+      IR : IR,
       Price: finalData[index + timePeriodRSI].lp,
       TS: (new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
       SID: req.queryStringParameters.sid,
@@ -560,102 +563,6 @@ const getNiftyETFData = async () => {
   });
   const resolvedETFData = await Promise.all(ETFData);
   return resolvedETFData;
-}
-const getInternalData = async (sec) => {
-  try {
-    const url = `https://api.tickertape.in/stocks/charts/inter/${sec.sid}?duration=1mo`;
-    const promUrl =await  fetch(url);
-    const data = await promUrl.json();
-    const sidData = data.data;
-    const returns1M =Number(sidData[0].r.toFixed(2));
-    const OneMonthLow =sidData[0].l;
-    const OneMonthHigh =sidData[0].h;
-    const dataPoints =sidData[0].points;//.filter(i=>i.ts.indexOf(datePart)<0);
-    
-    const filteredData = dataPoints.filter(i=>(i.ts.indexOf('T03:59:00.000Z')>0 )
-                                           || (i.ts.indexOf('T09:59:00.000Z')>0)         
-                                    ).map(j=>{
-                                        return{
-                                            ...j,
-                                            date : j.ts.split('T')[0]
-                                        }
-                                    });
-                                    
-                                                               
-    const sidDayWiseData=[];
-  //  console.log(filteredData[0])
-    console.log(filteredData)
-    console.log('----')
-    for (let index = 0; index < filteredData.length; index++) {
-       if(index%2==0){
-         
-        const elementStart = filteredData[index];
-        const elementEnd = filteredData[index+1];
-        if(index==filteredData.length-1 ||index==filteredData.length-2){
-          console.log(elementStart);
-          console.log(elementEnd);
-        }
-        
-        if(elementStart && elementEnd){
-          const item ={
-            startPrice:elementStart.lp,
-            endPrice :elementEnd.lp,
-            priceDiff:Number((elementEnd.lp-elementStart.lp).toFixed(2)),
-            intradayRise:Number(((elementEnd.lp-elementStart.lp)*100/elementEnd.lp).toFixed(2)),
-            volRise:Number(((elementEnd.v-elementStart.v)*100/elementEnd.v).toFixed(2)),
-            date : elementStart.date,
-        }
-        sidDayWiseData.push(item);
-        } 
-       }
-    } ;
-    //console.log(sidDayWiseData);  
-    const sidSMA5=SMA.calculate({period : 5, values : sidDayWiseData.map(i=>i.endPrice)});
-    const sidSMA8=SMA.calculate({period : 8, values : sidDayWiseData.map(i=>i.endPrice)});
-    const sidSMA14=SMA.calculate({period : 14, values : sidDayWiseData.map(i=>i.endPrice)});
-    
-    const lastDay =sidDayWiseData[sidDayWiseData.length-1];
-    const sidDayWiseBasedOnGain = sidDayWiseData.sort((a,b)=>(a.intradayRise-b.intradayRise));
-    const worstDay= sidDayWiseBasedOnGain[0];
-    const bestDay = sidDayWiseBasedOnGain[sidDayWiseBasedOnGain.length-1];
-    //do the best and worst day ago
-    const today = new Date();
-    const worstDayDate = new Date(worstDay.date);
-    const bestDayDate = new Date(bestDay.date);
-    const sinceBadDayDiff = Math.abs(today - worstDayDate);
-    const sinceBestDayDiff = Math.abs(today - bestDayDate);
-    const sinceGoodDay = Math.ceil(sinceBestDayDiff / (1000 * 60 * 60 * 24)); 
-    const sinceBadDay = Math.ceil(sinceBadDayDiff / (1000 * 60 * 60 * 24)); 
-  
-    const sidFinalResult ={
-        MH :OneMonthHigh,
-        ML: OneMonthLow,
-        MR :returns1M,
-        SMA5 : Number((sidSMA5[sidSMA5.length-1]).toFixed(2)),
-        SMA8 : Number((sidSMA8[sidSMA8.length-1]).toFixed(2)),
-        SMA14 : Number((sidSMA14[sidSMA14.length-1]).toFixed(2)),
-        BestDayRise :bestDay.intradayRise,
-        WorstDayFall:worstDay.intradayRise,
-        VolRise:lastDay.volRise,
-        IntradayRise : lastDay.intradayRise,
-        BadDayBefore :sinceBadDay,
-        GoodDayBefore: sinceGoodDay,
-        SID:sec.sid,
-        Date : lastDay.date
-    }   
-          return sidFinalResult;      
-  } catch (err) {
-    console.log(`Failed for `, sec.sid);
-  }
-}
-
-const getAllQuotes = async () => {
- // const allQuotesProm = await fetch(`https://quotes-api.tickertape.in/quotes?sids=ABOT,ACC,ADNA,APSE,ADAI,ALKE,ABUJ,ASPN,ARBN,AXBK,BAJA,BJFS,BJAT,BJFN,BANH,BOB,BRGR,BRTI,BION,BOSH,BPCL,BRIT,CADI,CIPL,COAL,COLG,CCRI,DABU,DIVI,DLF,AVEU,REDY,EICH,GAIL,GENA,GOCP,GRAS,HVEL,HCLT,HDFC,HDFA,HDBK,HDFL,HROM,HALC,HPCL,HLL,HZNC,ICBK,ICIL,ICIR,IGAS,INGL,INBK,BHRI,INFY,IOC,ITC,JSTL,KTKM,LART,LRTI,LUPN,MAHM,MRCO,MRTI,UNSP,MOSS,MUTT,INED,NEST,NMDC,NTPC,ORCL,ONGC,PIRA,PLNG,PWFC,PROC,PIDI,PNBK,PGRD,RELI,SBIC,SBIL,SBI,SHCM,SIEM,SUN,TACN,TAMO,TISC,TCS,TEML,TITN,TORP,UBBW,ULTC,UPLL,WIPR`);
- const allQuotesProm = await fetch(`https://quotes-api.tickertape.in/quotes?sids=ABOT`);
-  const dataRaw = await allQuotesProm.json();
-  const alldata = dataRaw.data.map(i => getInternalData(i));
-  const resolvedData = await Promise.all(alldata);
-  return resolvedData;
 }
 
 const getIndexData = async () => {
@@ -785,11 +692,10 @@ module.exports = {
   getRSIForAllTopCompanies,
   getNiftyHundredETData,
   getNiftyETFData,
-  getAllQuotes,
   getShortCandidates,
   getIndexData,
   getGlobalIndexData,
   getLiveRSIDaywise,
-  getTop200DRSI,
-  getForecasts
+  getForecasts,
+  getDRSI,
 };

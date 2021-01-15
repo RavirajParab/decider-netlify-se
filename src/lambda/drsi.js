@@ -1,6 +1,6 @@
-const {getTop200DRSI} = require("../utilities");
+const {getDRSI} = require("../utilities");
 exports.handler = async (event, context) => {
-    const drsiTop = await getTop200DRSI();
+    const quotes = await getDRSI(event);
     const headers = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type',
@@ -9,6 +9,6 @@ exports.handler = async (event, context) => {
   return {
     statusCode: 200,
     headers,
-    body: JSON.stringify(drsiTop)
+    body: JSON.stringify(quotes)
   };
 };
