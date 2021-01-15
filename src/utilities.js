@@ -227,6 +227,7 @@ const getSecRSI = async (symbol) => {
       PClose :data[13].Close,
       SSL:Number((Number(currentData.High) -Number(currentData.Close)).toFixed(2)),
       BSL:Number((Number(currentData.Close) -Number(currentData.Low)).toFixed(2)),
+      LQTY : (100000/Number(currentData.Close)).toFixed(2),
       IR: Number((((currentData.Close- currentData.Open)*100)/currentData.Close).toFixed(2)),
       PIR: Number((((data[13].Close- data[13].Open)*100)/data[13].Close).toFixed(2)),
       PreviousClose: data[13].Close,
