@@ -506,7 +506,8 @@ const getLiveRSIDaywise = async (req) => {
       Price: finalData[index + timePeriodRSI].lp,
       TS: (new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
       SID: req.queryStringParameters.sid,
-      Trend : trend
+      Trend : trend,
+      action : finalData
     }
     return data;
   });
