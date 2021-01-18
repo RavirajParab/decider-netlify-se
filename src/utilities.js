@@ -489,29 +489,31 @@ const getLiveRSIDaywise = async (req) => {
   const rawData = await fetch(url);
   const data = await rawData.json();
   const finalData = data.data[0].points.filter(i=>i!==undefined);
-  const trend = getTrend(finalData);
-  const lp =finalData[finalData.length-1].lp;
-  const sp = finalData[0].lp
-  const IR = Number(((lp-sp)*100/lp).toFixed(2));
-  const prices = finalData.map(i => i.lp);
-  const inputRSI = {
-    values: prices,
-    period: timePeriodRSI
-  };
-  const RSIResult = RSI.calculate(inputRSI);
-  const compositeData = RSIResult.map((i, index) => {
-    const data = {
-      RSI: i,
-      IR : IR,
-      Price: finalData[index + timePeriodRSI].lp,
-      TS: (new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
-      SID: req.queryStringParameters.sid,
-      Trend : trend,
-      action : finalData
-    }
-    return data;
-  });
-  return compositeData[compositeData.length - 1];
+  if(finalData.length>0){
+    const trend = getTrend(finalData);
+    const lp =finalData[finalData.length-1].lp;
+    const sp = finalData[0].lp
+    const IR = Number(((lp-sp)*100/lp).toFixed(2));
+    const prices = finalData.map(i => i.lp);
+    const inputRSI = {
+      values: prices,
+      period: timePeriodRSI
+    };
+    const RSIResult = RSI.calculate(inputRSI);
+    const compositeData = RSIResult.map((i, index) => {
+      const data = {
+        RSI: i,
+        IR : IR,
+        Price: finalData[index + timePeriodRSI].lp,
+        TS: (new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
+        SID: req.queryStringParameters.sid,
+        Trend : trend,
+        action : finalData
+      }
+      return data;
+    });
+    return compositeData[compositeData.length - 1];
+  }
 }
 
 
@@ -521,28 +523,31 @@ const getLiveRSIDaywiseLite = async (req) => {
   const rawData = await fetch(url);
   const data = await rawData.json();
   const finalData = data.data[0].points.filter(i=>i!==undefined);
-  const trend = getTrend(finalData);
-  const lp =finalData[finalData.length-1].lp;
-  const sp = finalData[0].lp
-  const IR = Number(((lp-sp)*100/lp).toFixed(2));
-  const prices = finalData.map(i => i.lp);
-  const inputRSI = {
-    values: prices,
-    period: timePeriodRSI
-  };
-  const RSIResult = RSI.calculate(inputRSI);
-  const compositeData = RSIResult.map((i, index) => {
-    const data = {
-      RSI: i,
-      IR : IR,
-      Price: finalData[index + timePeriodRSI].lp,
-      TS: (new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
-      SID: req.queryStringParameters.sid,
-      Trend : trend
-    }
-    return data;
-  });
-  return compositeData[compositeData.length - 1];
+  if(finalData.length>0){
+    const trend = getTrend(finalData);
+    const lp =finalData[finalData.length-1].lp;
+    const sp = finalData[0].lp
+    const IR = Number(((lp-sp)*100/lp).toFixed(2));
+    const prices = finalData.map(i => i.lp);
+    const inputRSI = {
+      values: prices,
+      period: timePeriodRSI
+    };
+    const RSIResult = RSI.calculate(inputRSI);
+    const compositeData = RSIResult.map((i, index) => {
+      const data = {
+        RSI: i,
+        IR : IR,
+        Price: finalData[index + timePeriodRSI].lp,
+        TS: (new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
+        SID: req.queryStringParameters.sid,
+        Trend : trend
+      }
+      return data;
+    });
+    return compositeData[compositeData.length - 1];
+  }
+  
 }
 const getNiftyHundredETData = async () => {
   const url = `https://json.bselivefeeds.indiatimes.com/ET_Community/liveindices?outputtype=json&indexid=2510&exchange=50&company=true&pagesize=100&sortby=percentchange&sortorder=desc`;
