@@ -539,6 +539,7 @@ const getLiveRSIDaywiseLite = async (req) => {
         RSI: i,
         IR : IR,
         Price: finalData[index + timePeriodRSI].lp,
+        tgtOrLS :Math.round(finalData[index + timePeriodRSI].lp*0.015),
         TS: (new Date(Date.parse(finalData[index + timePeriodRSI].ts))).toLocaleTimeString(),
         SID: req.queryStringParameters.sid,
         Trend : trend
