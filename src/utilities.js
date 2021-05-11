@@ -369,10 +369,49 @@ const getSBOppsForSID =async (sid)=>{
   
 }
 
+
+const getSBOppsForSIDETF =async (sid)=>{
+  const nif200Url = `https://api.tickertape.in/stocks/charts/intra/${sid}`;
+  const nifProm = await fetch(nif200Url);
+  const nifData = await nifProm.json();
+  const dataPoints = nifData.data[0].points;
+  const inputRSI ={
+      values : dataPoints.map(i=>i.lp),
+      period:rsiPeriod
+  }
+  const result = RSI.calculate(inputRSI);
+  const compositeRSIData = result.map((i,index)=>{
+      return {
+          RSI : i,
+          TS : new Date(dataPoints[index+rsiPeriod].ts).toLocaleTimeString(),
+          TSZ : dataPoints[index+rsiPeriod].ts,
+          LP : dataPoints[index+rsiPeriod].lp
+      }
+  });
+  const shortTingOpps = compositeRSIData.filter(i=>i.RSI>70).sort((a,b)=>b.LP-a.LP);
+  const buyingOpps = compositeRSIData.filter(i=>i.RSI<28).sort((a,b)=>a.LP-b.LP);
+ // const bestShortOp = shortTingOpps.sort((a,b)=>b.LP-a.LP);
+  return({
+      sid :sid,
+      shortTingOpps:shortTingOpps.length>0?shortTingOpps[0]:{},
+      buyingOpps:buyingOpps.length>0?buyingOpps[0]:{}
+  });
+  
+}
+
+
 const getTiming = async ()=>{
   const indices=["NIFTY200","NIFTYAUTO","NIFTYPSU","NIFTYMED","NIFTYFIN","NSEBANK","NIFTYIT",
     "NIPHARM","NIFTYMET","NIFTYREAL","NIFTYFMCG"];
     const indicesData=indices.map(i=>getSBOppsForSID(i));
+    const indicesDataRes = await Promise.all(indicesData);
+    return indicesDataRes;
+}
+
+
+const getTimingETF = async ()=>{
+  const indices=["BBES","NBES","GOMS","NIPD","PSUB","GBES"];
+    const indicesData=indices.map(i=>getSBOppsForSIDETF(i));
     const indicesDataRes = await Promise.all(indicesData);
     return indicesDataRes;
 }
@@ -753,5 +792,6 @@ module.exports = {
   getLiveRSIDaywise,
   getForecasts,
   getDRSI,
-  getDRSILite
+  getDRSILite,
+  getTimingETF
 };
